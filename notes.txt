@@ -1,0 +1,59 @@
+///////////////
+// JNI Steps //
+///////////////
+Step 1: Create a Java class with a native function declared (and not defined).
+        Java is finicy and the class must be contained in a folder structure
+        that correspondes to the package it is deifned in. In our example
+        this is my/test/pack/Test.java. I put this structure in a src/ directory
+        to organize it better.
+
+$ mkdir -p src/my/test/pack
+$ touch Test.java
+
+     package my.test.pack;
+     public class Test {
+            public native double printDouble(double d);
+     }
+
+Step 2: Compile the source into a .class file. The class file will be placed in
+        the same directory as the Test.java file.
+
+$ javac src/my/test/pack/Test.java
+
+Step 3: Create the header stub using the javah utilitiy. The argument you pass
+        this this utility is the fully-qualified class name (including all packages).
+        Make sure to specify the classpath which points to the root of the 
+        package folder structure, in our case this is src/. The header stub
+        will be placed in the current working directory that javah was run
+        in unless you specify the -o option
+
+$ javah -cp src/ my.test.pack.Test
+
+
+Step 4: In Step 3 a header file called my_test_pack_Test.h. Create a corresponding
+        cpp file that includes this header.
+
+Step 5: Implement the JNI functions.
+
+///////////////
+// JNI Notes //
+///////////////
+- JNI method signatures are abberviated using: http://docs.oracle.com/javase/1.5.0/docs/guide/jni/spec/types.html. 
+- A quick way to get a mathods signature:
+    - compile the class
+    - run: javap -s -cp /path/to/my/class my.test.pack.Test
+    - This will print all of the symbols, you will see "Signature: (DD)L" which is the
+      string to use when finding the method id inside JNI
+- When constructing a subclass the first argument must be a jobect pointer to the parent
+  class. Use above javap trick to find the exact signature (saves alot of time).
+- To load your JNI library you call System.loadLibarary("name");
+  if you library is called libname.so, you just give it "name" no lib or .so
+- The path that java uses to try and look for your library when you call System.loadLibrary()
+  is by default LD_LIBRARY_PATH. This is copied to the java property "java.library.path", 
+  which can be retrieved by System.getProperty("java.library.path");
+- The JNI library either needs to be inside LD_LIBRARY_PATH or in java.library.path
+- You can specify java.library.path on the command like like so:
+  $ java -Djava.library.path=/path/to/my/lib:$LD_LIBRARY_PATH
+- Use the static{} class block to load your library
+
+

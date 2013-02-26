@@ -1,0 +1,25 @@
+//////////
+// Java //
+//////////
+- Ensure all functions and variables are commented
+- Ensure everything is up to par with JavaDoc standards and style
+- Provide a link in each comment to the corresponding C++ function/varible
+  in the C++ documentation.
+- Current Direct() and Inverse() implementations compute all output variables.
+  Would be nice to provide a way (other than GenDirect()/GenInverse()) for clients
+  to choose which variables to compute.
+- Create a base class that DirectResult and InverseResult classes can both inherit
+  from which contains the shared variables and functions of both classes.
+- Implement the Line() function (requires implementing GeoLine first)
+
+/////////
+// JNI //
+/////////
+- Cache the jclass and jmethodID variables.
+  - Invoking JNI functions is expensive and uses reflection (slow). 
+    Java guarauntees that a jclass and jmethodID will remain constant for
+    the life of the JVM. To avoid overhead, look these up when the class is loaded
+    (inside static{} block) and cache them in the cpp file. Then the functions
+    can reuse these variables and avoid excess JNI overhead.
+  - Need to think about thread safety
+- Ensure C++ exceptions get translated into Java Exceptionx
