@@ -15,11 +15,4 @@
 /////////
 // JNI //
 /////////
-- Cache the jclass and jmethodID variables.
-  - Invoking JNI functions is expensive and uses reflection (slow). 
-    Java guarauntees that a jclass and jmethodID will remain constant for
-    the life of the JVM. To avoid overhead, look these up when the class is loaded
-    (inside static{} block) and cache them in the cpp file. Then the functions
-    can reuse these variables and avoid excess JNI overhead.
-  - Need to think about thread safety
 - Ensure C++ exceptions get translated into Java Exceptionx

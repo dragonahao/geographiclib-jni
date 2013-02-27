@@ -1,6 +1,6 @@
-project(GeographicLibJni)
+cmake_minimum_required(VERSION 2.6)
 
-cmake_minimum_required(VERSION 2.4.0)
+project(GeographicLibJni)
 
 # verbose makefile
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Verbose" FORCE)
@@ -8,25 +8,19 @@ set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Verbose" FORCE)
 set(CMAKE_BUILD_TYPE Debug)
 # warn all and -fPIC for shared build
 set(CMAKE_CXX_FLAGS "-Wall -fPIC -fno-strict-aliasing")
+# place the GeographicLibJni.so in the lib/ directory by default
+set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_LIST_DIR}/lib)
 
-# include directories, $ENV{JAVA_HOME} reads the JAVA_HOME environment variable
-# from the users shell. JAVA_HOME contains the include/ and lib/ directories
-# needed to compile and link against JNI.
-include_directories(
-  ${CMAKE_CURRENT_LIST_DIR}/include
-  "/usr/local/include"
-  "/usr/include"
-  "~/downloads/GeographicLib-1.29/include")
+###############################
+#        Find Packages        #
+###############################
 
-link_directories(
-  ${CMAKE_CURRENT_BINARY_DIR}
-  "/usr/local/lib64"
-  "/usr/lib64"
-  "/lib64"
-  "/usr/local/lib"
-  "/usr/lib"
-  "/lib"
-  "~/downloads/GeographicLib-1.29/build/src")
+# Find GeographicLib
+find_package(GeographicLib)
+if (GEOGRAPHICLIB_FOUND)
+  include_directories(${GeographicLib_INCLUDE_DIRS})
+  link_directories(${GeographicLib_LIBRARY_DIRS})
+endif (GEOGRAPHICLIB_FOUND)
 
 # Find the Java Native Interfaces (JNI) package and add it to the include and
 # link directories
@@ -36,14 +30,23 @@ if (JNI_FOUND)
   link_directories(${JNI_LIBRARIES})
 endif (JNI_FOUND)
 
+########################################
+# GeographicLibJni Sources and Headers #
+########################################
+
+# CMAKE_CURRENT_LIST_DIR is the directory that contains the CMakeLists.txt file
+# which in our case is the root directory of the project so add include/ to
+# the include directories
+include_directories(${CMAKE_CURRENT_LIST_DIR}/include)
+
 # search the src/ directory for all files ending in .cpp
 file(GLOB SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
 # search the include/GeographicLib/jni/ directory for all files ending in .h
 file(GLOB HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/GeographicLib/jni/*.h)
 
 # debug print to make sure we globbed the correct source/headers
-message("sources: ${SOURCES}")
-message("headers: ${HEADERS}")
+message("GeographicLibJni Sources: ${SOURCES}")
+message("GeographicLibJni Headers: ${HEADERS}")
 
 # define the GeographicJni library and specify whether it is shared or not.
 add_library(GeographicJni SHARED ${SOURCES} ${HEADERS})
@@ -51,3 +54,31 @@ add_library(GeographicJni SHARED ${SOURCES} ${HEADERS})
 # link the library against GeographicLib
 target_link_libraries(GeographicJni Geographic)
 
+##################
+# Install Target #
+##################
+# useage: make install
+
+# install headers
+install (FILES ${HEADERS} DESTINATION include/GeographicLib/jni)
+
+# install library file
+install(TARGETS GeographicJni
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib${LIB_SUFFIX}
+  ARCHIVE DESTINATION lib${LIB_SUFFIX}
+)
+
+####################
+# Uninstall target #
+####################
+# useage: make uninstall
+
+# uninstalls everything that install installed
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)

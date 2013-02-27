@@ -13,7 +13,7 @@ make
 cd ..
 
 # Ensure the libGeographicJni.so is in our LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$DIR/build:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$DIR/lib:$LD_LIBRARY_PATH
 
 # Build Java
 cd $DIR/java

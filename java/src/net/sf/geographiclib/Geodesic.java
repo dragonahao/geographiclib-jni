@@ -23,6 +23,7 @@ public class Geodesic implements Closeable {
     // force the GeographicLib JNI library to be loaded before anything below
     // is executed
     LibraryLoader.load();
+    staticInit();
   }
 
   private static final long CAP_NONE = 0;
@@ -116,6 +117,11 @@ public class Geodesic implements Closeable {
   // The following functions are used to help wrap and manager the underlying //
   // C++ pointer that this class holds                                        //
   //////////////////////////////////////////////////////////////////////////////
+  /** 
+   * @brief Initializes the native classes static variables
+   */
+  private static native void staticInit();
+  
   /**
    * Creates a new GeographicLib::Geodesic object and returns the pointer to it.
    * @param a equatorial radius (meters).

@@ -5,6 +5,77 @@
 using GeographicLib::Geodesic;
 using GeographicLib::Math;
 
+struct JniCache
+{
+  JniCache()
+      : mClass(NULL),
+        mConstructorMid(NULL)
+  {}
+  
+  jclass mClass;
+  jmethodID mConstructorMid;
+};
+
+static JniCache GEODESIC_CACHE;
+static JniCache DIRECT_RESULT_CACHE;
+static JniCache INVERSE_RESULT_CACHE;
+
+JNIEXPORT void JNICALL
+Java_net_sf_geographiclib_Geodesic_staticInit(JNIEnv* pEnv,
+                                              jclass geodesicClass)
+{
+  jmethodID mid;
+  jclass result_class;
+  
+  // Get its constructor (the one that takes 2 doubles (a, f))
+  mid = pEnv->GetMethodID(geodesicClass, "<init>", "(DD)V");
+  if (pEnv->ExceptionCheck() || mid == NULL)
+  {
+    printf("Can't get MethodID for Geodesic constructor\n");
+    return;
+  }
+  GEODESIC_CACHE.mClass = (jclass)pEnv->NewGlobalRef(geodesicClass);
+  GEODESIC_CACHE.mConstructorMid = mid;
+  
+  // Get the handle of the net.sf.geographiclib.Geodesic.DirectResult class
+  result_class = pEnv->FindClass("net/sf/geographiclib/Geodesic$DirectResult");
+  if (pEnv->ExceptionCheck() || result_class == NULL)
+  {
+    printf("Can't FindClass(net/sf/geographiclib/Geodesic$DirectResult\n");
+    return;
+  }
+  DIRECT_RESULT_CACHE.mClass = (jclass)pEnv->NewGlobalRef(result_class);
+  
+  // Get its constructor (the one that takes the parent class, one long, and 9 doubles)
+  mid = pEnv->GetMethodID(DIRECT_RESULT_CACHE.mClass, "<init>",
+                          "(Lnet/sf/geographiclib/Geodesic;JDDDDDDDDD)V");
+  if (pEnv->ExceptionCheck() || mid == NULL)
+  {
+    printf("Can't get MethodID for DirectResult constructor\n");
+    return;
+  }
+  DIRECT_RESULT_CACHE.mConstructorMid = mid;
+  
+  // Get the handle of the net.sf.geographiclib.Geodesic.DirectResult class
+  result_class = pEnv->FindClass("net/sf/geographiclib/Geodesic$InverseResult");
+  if (pEnv->ExceptionCheck() || result_class == NULL)
+  {
+    printf("Can't FindClass(net/sf.geographiclib/Geodesic$InverseResult\n");
+    return;
+  }
+  INVERSE_RESULT_CACHE.mClass = (jclass)pEnv->NewGlobalRef(result_class);
+  
+  // Get its constructor (the one that takes the parent object, one long, and 8 doubles)
+  mid = pEnv->GetMethodID(result_class, "<init>",
+                          "(Lnet/sf/geographiclib/Geodesic;JDDDDDDDD)V");
+  if (pEnv->ExceptionCheck() || mid == NULL)
+  {
+    printf("Can't get MethodID for InverseResult constructor\n");
+    return;
+  }
+  INVERSE_RESULT_CACHE.mConstructorMid = mid;
+}
+
 /*
  * Class:     net_sf_geographiclib_Geodesic
  * Method:    newGeodesicCppObject
@@ -47,23 +118,13 @@ JNIEXPORT jobject JNICALL
 Java_net_sf_geographiclib_Geodesic_newGeodesicWgs84Object(JNIEnv* pEnv,
                                                           jclass geodesicClass)
 { 
-  // Get its constructor (the one that takes 2 doubles (a, f))
-  jmethodID mid = pEnv->GetMethodID(geodesicClass, "<init>", "(DD)V");
-  if (pEnv->ExceptionOccurred())
-  {
-    return NULL;
-  }
-  else if (mid == NULL)
-  {
-    printf("Can't get MethodID for Geodesic constructor\n");
-    return NULL;
-  }
-
   jdouble a = Geodesic::WGS84.MajorRadius();
   jdouble f = Geodesic::WGS84.Flattening();
 
   // Allocate the Geodesic
-  return pEnv->NewObject(geodesicClass, mid, a, f);
+  return pEnv->NewObject(GEODESIC_CACHE.mClass,
+                         GEODESIC_CACHE.mConstructorMid,
+                         a, f);
 }
 
 /*
@@ -150,35 +211,10 @@ Java_net_sf_geographiclib_Geodesic_nativeGenDirect(JNIEnv* pEnv,
   Math::real s12 = 0;
   Math::real a12 = geodesic->GenDirect(lat1, lon1, azi1, arcmode, s12_a12, outmask,
                                        lat2, lon2, azi2, s12, m12, M12, M21, S12);
-
-  // Get the handle of the net.sf.geographiclib.Geodesic.DirectResult class
-  jclass result_class = pEnv->FindClass("net/sf/geographiclib/Geodesic$DirectResult");
-  if (pEnv->ExceptionOccurred())
-  {
-    return NULL;
-  }
-  else if (result_class == NULL)
-  {
-    printf("Can't FindClass(net/sf/geographiclib/Geodesic$DirectResult\n");
-    return NULL;
-  }
   
-  // Get its constructor (the one that takes the parent class, one long, and 9 doubles)
-  jmethodID mid = pEnv->GetMethodID(result_class, "<init>",
-                                    "(Lnet/sf/geographiclib/Geodesic;JDDDDDDDDD)V");
-  
-  if (pEnv->ExceptionOccurred())
-  {
-    return NULL;
-  }
-  else if (mid == NULL)
-  {
-    printf("Can't get MethodID for DirectResult constructor\n");
-    return NULL;
-  }
-
   // Allocate the DirectResult
-  return pEnv->NewObject(result_class, mid,
+  return pEnv->NewObject(DIRECT_RESULT_CACHE.mClass,
+                         DIRECT_RESULT_CACHE.mConstructorMid,
                          geodesicObject,
                          outmask,
                          lat2,
@@ -246,33 +282,9 @@ Java_net_sf_geographiclib_Geodesic_nativeGenInverse(JNIEnv* pEnv,
   Math::real a12 = geodesic->GenInverse(lat1, lon1, lat2, lon2, outmask,
                                         s12, azi1, azi2, m12, M12, M21, S12);
 
-  // Get the handle of the net.sf.geographiclib.Geodesic.DirectResult class
-  jclass result_class = pEnv->FindClass("net/sf/geographiclib/Geodesic$InverseResult");
-  if (pEnv->ExceptionOccurred())
-  {
-    return NULL;
-  }
-  else if (result_class == NULL)
-  {
-    printf("Can't FindClass(net/sf.geographiclib/Geodesic$InverseResult\n");
-    return NULL;
-  }
-  
-  // Get its constructor (the one that takes the parent object, one long, and 8 doubles)
-  jmethodID mid = pEnv->GetMethodID(result_class, "<init>",
-                                    "(Lnet/sf/geographiclib/Geodesic;JDDDDDDDD)V");
-  if (pEnv->ExceptionOccurred())
-  {
-    return NULL;
-  }
-  else if (mid == NULL)
-  {
-    printf("Can't get MethodID for InverseResult constructor\n");
-    return NULL;
-  }
-
   // Allocate the InverseResult
-  return pEnv->NewObject(result_class, mid,
+  return pEnv->NewObject(INVERSE_RESULT_CACHE.mClass,
+                         INVERSE_RESULT_CACHE.mConstructorMid,
                          geodesicObject,
                          outmask,
                          s12,

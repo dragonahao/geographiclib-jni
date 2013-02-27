@@ -45,6 +45,14 @@ extern "C" {
 #define net_sf_geographiclib_Geodesic_MASK_ALL 32671LL
 /*
  * Class:     net_sf_geographiclib_Geodesic
+ * Method:    staticInit
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_net_sf_geographiclib_Geodesic_staticInit
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     net_sf_geographiclib_Geodesic
  * Method:    newGeodesicCppObject
  * Signature: (DD)J
  */
